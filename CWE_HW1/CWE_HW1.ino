@@ -21,25 +21,35 @@
  //@LT Dahlen: (explanation)
  
  */
-
-#include <USART.h> 
-#include <SPI.h>  
+ 
+#include <USART.h>
+#include <SPI.h>
 #include <line_parser.h>
+ 
+ 
+// AVR GCC libraries for more information see:
+//      http://www.nongnu.org/avr-libc/user-manual/modules.html
+//      https://www.gnu.org/software/libc/manual/
 
-#include <avr/io.h>
-#include <avr/interrupt.h>
-#include <stdint.h>
-#include <string.h>
-#include <ctype.h>
-#include <math.h>
+    #include <avr/io.h>
+    #include <avr/interrupt.h>
+    #include <stdint.h>
+    #include <string.h>
+    #include <ctype.h>
 
-#include <LiquidCrystal.h>
+// Arduino libraries: see http://arduino.cc/en/Reference/Libraries
 
-#include "configuration.h"
-#include "USART.h"
-#include "line_parser.h"
+    #include <LiquidCrystal.h>
 
-char line[BUF_LEN];
+// Project specific includes
+
+    #include "configuration.h"
+    #include "USART.h"
+    #include "line_parser.h"
+
+// Global variables
+
+    char line[BUF_LEN];
 
 LiquidCrystal lcd (LCD_RS,  LCD_E, LCD_D4,  LCD_D5, LCD_D6, LCD_D7);   // Yes, this is a variable!
 
@@ -311,6 +321,3 @@ void loop(){
     }
   }
 }
-
-
-
