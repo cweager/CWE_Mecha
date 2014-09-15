@@ -21,38 +21,39 @@
  //@LT Dahlen: (explanation)
  
  */
- 
+
 #include <USART.h>
 #include <SPI.h>
 #include <line_parser.h>
- 
- 
+
+
 // AVR GCC libraries for more information see:
 //      http://www.nongnu.org/avr-libc/user-manual/modules.html
 //      https://www.gnu.org/software/libc/manual/
 
-    #include <avr/io.h>
-    #include <avr/interrupt.h>
-    #include <stdint.h>
-    #include <string.h>
-    #include <ctype.h>
+#include <avr/io.h>
+#include <avr/interrupt.h>
+#include <stdint.h>
+#include <string.h>
+#include <ctype.h>
 
 // Arduino libraries: see http://arduino.cc/en/Reference/Libraries
 
-    #include <LiquidCrystal.h>
+#include <LiquidCrystal.h>
 
 // Project specific includes
 
-    #include "configuration.h"
-    #include "USART.h"
-    #include "line_parser.h"
+#include "USART.h"
+#include "line_parser.h"
+#include "configuration.h"
+#include "play_mario.h"
+//#include "play_mario.cpp"
 
 // Global variables
 
-    char line[BUF_LEN];
+char line[BUF_LEN];
 
 LiquidCrystal lcd (LCD_RS,  LCD_E, LCD_D4,  LCD_D5, LCD_D6, LCD_D7);   // Yes, this is a variable!
-
 
 void setup(){
 
@@ -105,119 +106,18 @@ void setup(){
 
   //Play super mario theme song for TASK 4
   play_mario(); //play super mario theme song
-   
-   //Impersonate R2D2 for TASK 5
-   int totDur = 0; //impersinate R2D2 for five seconds (5,000 ms)
-   while (totDur < 5000) {
-   
-   long ranTone = random(100, 4500);
-   long ranDur = random(50, 200);
-   tone(BUZ_PIN, ranTone); //play random R2D2 noise
-   delay(ranDur);
-   totDur += ranDur;
-   } 
-   noTone(BUZ_PIN);
 
-}
+  //Impersonate R2D2 for TASK 5
+  int totDur = 0; //impersinate R2D2 for five seconds (5,000 ms)
+  while (totDur < 5000) {
+    long ranTone = random(100, 3000);
+    long ranDur = random(50, 200);
+    tone(BUZ_PIN, ranTone); //play random R2D2 noise
+    delay(ranDur);
+    totDur += ranDur;
+  } 
+  noTone(BUZ_PIN);
 
-//Super Mario Bro's Theme Song Function
-//Program:  HW1
-//Author:   PRINCE
-//Citation: http://www.princetronics.com/supermariothemesong/
-//
-//Editor:   Cody Eager, 1/c
-//Module:   play_mario()
-//Date:     09 September 2014
-void play_mario() {
-
-  int melody[] = {
-    2637, 2637, 0, 2637,
-    0, 2093, 2637, 0,
-    3136, 0, 0,  0,
-    1568, 0, 0, 0,
-
-    2093, 0, 0, 1568,
-    0, 0, 1319, 0,
-    0, 1760, 0, 1976,
-    0, 1865, 1760, 0,
-
-    1568, 2637, 3136,
-    3520, 0, 2794, 3136,
-    0, 2637, 0, 2093,
-    2349, 1976, 0, 0,
-
-    2093, 0, 0, 1568,
-    0, 0, 1319, 0,
-    0, 1760, 0, 1976,
-    0, 1865, 1760, 0,
-
-    1568, 2637, 3136,
-    3520, 0, 2794, 3136,
-    0, 2637, 0, 2093,
-    2349, 1976, 0, 0
-  };
-
-  int tempo[] = {
-    12, 12, 12, 12,
-    12, 12, 12, 12,
-    12, 12, 12, 12,
-    12, 12, 12, 12,
-
-    12, 12, 12, 12,
-    12, 12, 12, 12,
-    12, 12, 12, 12,
-    12, 12, 12, 12,
-
-    9, 9, 9,
-    12, 12, 12, 12,
-    12, 12, 12, 12,
-    12, 12, 12, 12,
-
-    12, 12, 12, 12,
-    12, 12, 12, 12,
-    12, 12, 12, 12,
-    12, 12, 12, 12,
-
-    9, 9, 9,
-    12, 12, 12, 12,
-    12, 12, 12, 12,
-    12, 12, 12, 12,
-  };
-
-  for (int thisNote = 0; thisNote < 78; thisNote++) {
-
-    // to calculate the note duration, take one second
-    // divided by the note type.
-    //e.g. quarter note = 1000 / 4, eighth note = 1000/8, etc.
-    int noteDuration = 1000 / tempo[thisNote];
-
-    buzz(BUZ_PIN, melody[thisNote], noteDuration);
-
-    // to distinguish the notes, set a minimum time between them.
-    // the note's duration + 30% seems to work well:
-    int pauseBetweenNotes = noteDuration * 1.30;
-    delay(pauseBetweenNotes);
-
-    // stop the tone playing:
-    buzz(BUZ_PIN, 0, noteDuration);
-  }  
-}
-
-void buzz(int targetPin, long frequency, long length) {
-  digitalWrite(13, HIGH);
-  long delayValue = 1000000 / frequency / 2; // calculate the delay value between transitions
-  //// 1 second's worth of microseconds, divided by the frequency, then split in half since
-  //// there are two phases to each cycle
-  long numCycles = frequency * length / 1000; // calculate the number of cycles for proper timing
-  //// multiply frequency, which is really cycles per second, by the number of seconds to
-  //// get the total number of cycles to produce
-  for (long i = 0; i < numCycles; i++) { // for the calculated length of time...
-    digitalWrite(targetPin, HIGH); // write the buzzer pin high to push out the diaphram
-    delayMicroseconds(delayValue); // wait for the calculated delay value
-    digitalWrite(targetPin, LOW); // write the buzzer pin low to pull back the diaphram
-    delayMicroseconds(delayValue); // wait again or the calculated delay value
-  }  
-  digitalWrite(13, LOW);  
 }
 
 /*********************************************************************************
@@ -321,3 +221,4 @@ void loop(){
     }
   }
 }
+
