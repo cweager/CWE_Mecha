@@ -61,6 +61,9 @@ void setup(){
   pinMode(13, OUTPUT);//led indicator when singing a note
   pinMode(11, OUTPUT);//K2 Relay
   pinMode(3, OUTPUT);//K1 Relay
+  
+  digitalWrite(K1, LOW);  // Ensure relay is deactivated
+  digitalWrite(K2, LOW);  // Ensure relay is deactivated
 
   USART_init(F_CLK, BAUD_RATE);                   // The USART code must be placed in your Arduino sketchbook
   USART_set_terminator(LINE_TERMINATOR);
