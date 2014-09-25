@@ -143,7 +143,7 @@ void loop(){
   uint32_t currentTime;
   static uint32_t startTime = 0;      //get start time
   static uint32_t elapsedTime = 0;    //calculate elapsed time from command start
-  static uint32_t commTime = 0;       //time at previous serial command
+  static uint32_t engTime = 0;        //time at engage command
 
   static uint32_t RPM = 0;            //RPM (DC Voltage) of our Tachometer
 
@@ -171,7 +171,7 @@ void loop(){
     else if (!strncmp(line, "Engage", 5) || !strncmp(line, "engage", 5) || !strncmp(line, "ENGAGE", 5)){
 
       accel_F = true;
-      commTime = millis();
+      engTime = millis();
       USART_puts("\n");
 
     }
@@ -265,7 +265,7 @@ void loop(){
 
   }
 
-  else if (commTime - elapsedTime >= 10000 && secure_F == true){ //NOTE: runs at full power for 10 seconds, then secures
+  else if (millis() - engTime >= 5000 && secure_F == true){ //NOTE: runs at full power for 10 seconds, then secures
 
     sprintf(line, "Motor secured and coasting to a stop.\n");
     USART_puts(line);  //Send line to USART
