@@ -171,7 +171,7 @@ void loop(){
     }
     else {
 
-      sprintf(line, "\nInvalid command.  Please type \"START.\"\n");
+      sprintf(line, "\nInvalid command.\n");
       USART_puts(line);
 
     }
@@ -233,10 +233,12 @@ void loop(){
     // Activate K2 relay (pin 11)
     digitalWrite(K2_PIN, HIGH);
 
-    sprintf(line, "\nPlease type \"ENGAGE\" to use full power.\n");
-    USART_puts(line);
+    if ( RPM > 250 ) {
+      sprintf(line, "\nPlease type \"ENGAGE\" to use full power.\n");
+      USART_puts(line);
 
-    run_F = false;
+      run_F = false;
+    }
   }
 
   else if (accel_F == true){
@@ -316,6 +318,7 @@ void loop(){
   RPM = analogRead(TACH_PIN);
   sprintf(LCD_str, "RPM: %u", RPM);
   lcd.clear();
+  lcd.setCursor(0, 1);
   lcd.print(LCD_str);
   delay(100);
 
