@@ -102,11 +102,15 @@ char LCD_str[17];
 
 LiquidCrystal lcd (LCD_RS, LCD_E, LCD_D4, LCD_D5, LCD_D6, LCD_D7);   // Yes, this is a variable!
 
+volatile uint8_t reset_flag = 0;
 volatile uint8_t start_flag = 0;
+volatile uint8_t idle_flag = 0;
 volatile uint8_t engage_flag = 0;
+volatile uint8_t lowpower_flag = 0;
+volatile uint8_t fault_flag = 0;
 
 typedef enum{ 
-  initial, secured, idle, full } 
+  initial, secured, startup, idle, full, lowpower, fault } 
 e_states;
 
 volatile static e_states state = initial;
@@ -120,15 +124,21 @@ void setup(){
   pinMode(K1_PIN, OUTPUT);
   pinMode(K2_PIN, OUTPUT);
 
-  pinMode(LED_PIN, OUTPUT);
+  pinMode(LED_PIN, OUTPUT); 
 
   USART_init(F_CLK, BAUD_RATE);                   // The USART code must be placed in your Arduino sketchbook
   USART_set_terminator(LINE_TERMINATOR);
 
   init_timer_1_CTC(100);                          // Enable the timer ISR
 
-  lcd.begin(16, 2);                               // Initialize LCD display
-
+  lcd.begin(16, 2);   // Initialize LCD display
+  
+  /*pinMode(3, OUTPUT);
+  pinMode(11, OUTPUT);
+  TCCR2A = _BV(COM2A1) | _BV(COM2B1) | _BV(WGM21) | _BV(WGM20);
+  TCCR2B = _BV(CS22);                                               // This register controls PWM frequency
+  OCR2A = 0; //SET PWM OF K2 (11)
+  OCR2B = 0; //SET PWM OF K1 (3)*/
 
 }
 
@@ -209,6 +219,8 @@ ISR(TIMER1_COMPA_vect){
     //De-energize realys
     digitalWrite(K1_PIN, LOW);
     digitalWrite(K2_PIN, LOW);
+    //OCR2A = 128; //SET PWM OF K2 (11)
+    //OCR2B = 128; //SET PWM OF K1 (3)
 
     break;
 
@@ -216,45 +228,86 @@ ISR(TIMER1_COMPA_vect){
 
     digitalWrite(K1_PIN, LOW);
     digitalWrite(K2_PIN, LOW);
+    //OCR2A = 128; //SET PWM OF K2 (11)
+    //OCR2B = 128; //SET PWM OF K1 (3)
     if (start_flag){
       start_flag = 0;
-      state = idle;
+      state = startup;
       time_in_state = 0;
     }
 
+    break;
+    
+  case startup:
+    digitalWrite(K1_PIN, LOW);
+    digitalWrite(K2_PIN, HIGH);
+    //OCR2A = 255; //SET PWM OF K2 (11)
+    //OCR2B = 0; //SET PWM OF K1 (3)
+    if (++time_in_state > 400){
+      //fault_flag = 0;
+      state = fault;
+      time_in_state = 0;
+    }
+    else if (idle_flag){
+      idle_flag = 0;
+      state = idle;
+      time_in_state = 0;
+    }
     break;
 
   case idle:
 
     digitalWrite(K1_PIN, LOW);
     digitalWrite(K2_PIN, HIGH);
-
+    //OCR2A = 255; //SET PWM OF K2 (11)
+    //OCR2B = 0; //SET PWM OF K1 (3)
     if (engage_flag){
       engage_flag = 0;
       state = full;
       time_in_state = 0;
     }
-
     break;
 
   case full:
 
     digitalWrite(K1_PIN, HIGH);
     digitalWrite(K2_PIN, LOW);
-
-    if (++time_in_state > 3000){
-      state = secured;
+    //OCR2A = 0; //SET PWM OF K2 (11)
+    //OCR2B = 255; //SET PWM OF K1 (3)
+    if (++time_in_state > 100) {
+      state = lowpower;
       time_in_state = 0;
     }
 
     break;
+    
+  case lowpower:
+  
+    //Reduce K1 PWM to lowest possible
+    //OCR2A = 0; //SET PWM OF K2 (11)
+    //OCR2B = 128; //SET PWM OF K1 (3)
+    if (++time_in_state > 200) {
+      state = secured;
+      time_in_state = 0;
+    }
+    
+    break;
+    
+  case fault:    
+    digitalWrite(K1_PIN, LOW);
+    digitalWrite(K2_PIN, LOW);
 
+    if (reset_flag){
+      noTone(BUZ_PIN);
+      reset_flag = 0;
+      state = secured;
+      time_in_state = 0;
+    }    
+    break;
 
 
   default:
-
     state = secured;
-
     break; 
   }
 }
@@ -291,7 +344,7 @@ void loop(){
       lcd.clear();
       lcd.print("Mecha FSM Lab");
       lcd.setCursor(0, 1);
-      lcd.print("  25 Sep 14");
+      lcd.print("  02 Oct 14");
 
       USART_puts("This lab demonstrates serial control of the Arduino. It also changes motor operating\n");
       USART_puts("states based on feedback from a tachometer.  Type \"start,\" then strike enter to begin.\n");
@@ -311,7 +364,8 @@ void loop(){
 
 
     case secured:
-    if (last_state == full) {
+    if (last_state == lowpower) {
+      USART_puts("\nMotor secured.\n");
       lcd.clear();
       lcd.setCursor(0, 0);
       lcd.print("Motor secured.");
@@ -334,33 +388,89 @@ void loop(){
 
       USART_puts("\nType \"START\" to initiate a startup sequence.\n");
       break;
+      
+    case startup:
+    
+      USART_puts("Standby! a motor start sequence has been initiated.\n");
+
+      lcd.clear();                                    // Clear LCD
+      lcd.setCursor(0, 0);                            // Point to the LCD line 1 upper right character position
+      lcd.print("CAUTION!");
+      lcd.setCursor(0, 1);                            // Point to LCD line 2 left character position
+      lcd.print("Motor Starting.");
+      USART_puts("Motor is ramping.\n");
+
+      tone(BUZ_PIN, 5000);
+      delay(250);
+      noTone(BUZ_PIN);
+      delay(250);
+      tone(BUZ_PIN, 5000);
+      delay(250);
+      noTone(BUZ_PIN);
+      delay(250);
+      tone(BUZ_PIN, 5000);
+      delay(250);
+      noTone(BUZ_PIN);
+
+      //Scroll and clear message
+      for (int i = 0; i < 15; i++)
+      {
+        lcd.scrollDisplayRight(); 
+        delay(50);
+      }
+      lcd.clear(); //clear LCD screen
+      
+      lcd.setCursor(0,0);
+      lcd.print("State: Startup"); 
+      break;
 
 
     case idle:
       lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("State: Idle");
 
       tone(BUZ_PIN, 1047);   // C
       delay(200);
       noTone(BUZ_PIN);
       
-      USART_puts("Motor is ramping.\n");
-      USART_puts("Motor is in idle state.\n");
+      USART_puts("\nMotor is in idle state.\n");
       USART_puts("Type \"ENGAGE\" to go to full power.\n");
-      
       break;
 
 
     case full:
       lcd.clear();
+      lcd.setCursor(0, 0);
       lcd.print("State:  Full");
 
       USART_puts("Motor is in full power state.\n");
-      USART_puts("Motor will secure in 3 seconds.\n");
 
       tone(BUZ_PIN, 1047);   // C
       delay(200);
       noTone(BUZ_PIN);
-      delay(100);
+      break;
+      
+    case lowpower:
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("State:  PWM");
+
+      USART_puts("\nRelay K1 duty cycle reduced to save power.\n");
+      USART_puts("Motor will secure in 2 seconds.\n");
+
+      tone(BUZ_PIN, 1047);   // C
+      delay(200);
+      noTone(BUZ_PIN);   
+      break;
+      
+    case fault:
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("State:  Fault");
+      
+      USART_puts("\nCAUTION! Motor did not achieve idle!\n");
+      USART_puts("Type \"RESET\" to reset system.\n");
       break;
 
 
@@ -378,66 +488,52 @@ void loop(){
    * was used to keep the ISR code small and fast.
    */
 
-  switch(state){
+  switch(state){  
 
   case initial:
-
     break;
 
   case secured:
-
     if(USART_is_string()){
       USART_gets(buf);
       if(!strcmp(buf,"start") || !strcmp(buf,"Start") || !strcmp(buf,"START")){
         start_flag = 1;
         USART_puts(strcat(buf, "\n\n"));
-
-        USART_puts("Standby! a motor start sequence has been initiated.\n\n");
-
-        lcd.clear();                                    // Clear LCD
-        lcd.setCursor(0, 0);                            // Point to the LCD line 1 upper right character position
-        lcd.print("CAUTION!");
-        lcd.setCursor(0, 1);                            // Point to LCD line 2 left character position
-        lcd.print("Motor Starting.");
-
-        tone(BUZ_PIN, 5000);
-        delay(250);
-        noTone(BUZ_PIN);
-        delay(250);
-        tone(BUZ_PIN, 5000);
-        delay(250);
-        noTone(BUZ_PIN);
-        delay(250);
-        tone(BUZ_PIN, 5000);
-        delay(250);
-        noTone(BUZ_PIN);
-
-        //Scroll and clear message
-        for (int i = 0; i < 15; i++)
-        {
-          lcd.scrollDisplayRight(); 
-          delay(200);
-        }
-        lcd.clear(); //clear LCD screen
       }
       else {
         USART_puts("\nInvalid command.  Please type \"START.\"\n"); 
       }
     }
-
     break;
-
-  case idle:
-    lcd.clear();
+    
+  case startup:
     RPM = analogRead(TACH_PIN);
     sprintf(LCD_str, "RPM: %u ", RPM);
     
-    lcd.setCursor(0,0);
-    lcd.print("State: Idle");
+    lcd.setCursor(0, 1);
+    lcd.print(LCD_str);
+    
+    if (count > 10) {
+      USART_puts(strcat(LCD_str, "\n"));
+      count = 0;
+    }
+    
+    if(RPM > 275) {
+      idle_flag = 1;
+    }
+    
+    count++;
+    delay(50);
+    break;
+
+  case idle:
+    RPM = analogRead(TACH_PIN);
+    sprintf(LCD_str, "RPM: %u ", RPM);
+    
     lcd.setCursor(0, 1);
     lcd.print(LCD_str);
 
-    if (count > 100) {
+    if (count > 10) {
       USART_puts(strcat(LCD_str, "\n"));
       count = 0;
     }
@@ -454,27 +550,63 @@ void loop(){
     }
 
     count++;
-    delay(100);
+    delay(50);
     break;
 
 
   case full:
-
     RPM = analogRead(TACH_PIN);
     sprintf(LCD_str, "RPM: %u ", RPM);
     lcd.setCursor(0, 1);
     lcd.print(LCD_str);
 
-    if (count > 100) {
+    if (count > 5) {
       USART_puts(strcat(LCD_str, "\n"));
       count = 0;
     }
 
     count++;
-    delay(100);
-
+    delay(25);
     break;
+    
+  case lowpower:
+    RPM = analogRead(TACH_PIN);
+    sprintf(LCD_str, "RPM: %u ", RPM);
+    lcd.setCursor(0, 1);
+    lcd.print(LCD_str);
 
+    if (count > 5) {
+      USART_puts(strcat(LCD_str, "\n"));
+      count = 0;
+    }
+
+    count++;
+    delay(25);
+    break;
+  
+  case fault:
+    if (count < 5000) {
+      tone(BUZ_PIN, 554);
+    }
+    else if (count > 10000) {
+      count = 0;
+    }
+    else {
+      noTone(BUZ_PIN); 
+    }
+    if(USART_is_string()){
+      USART_gets(buf);
+      if(!strcmp(buf,"reset") || !strcmp(buf,"Reset") || !strcmp(buf,"RESET")){
+        reset_flag = 1;
+        USART_puts(strcat(buf, "\n\n"));
+      }
+      else {
+        USART_puts("\nInvalid command.  Please type \"RESET.\"\n"); 
+      }
+    }
+    count++;
+    noTone(BUZ_PIN);
+    break;
 
   default:
     break;
