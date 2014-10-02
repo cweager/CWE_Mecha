@@ -92,12 +92,6 @@ void setup(){
 
   }
 
-  //De-energize realys
-  // Deactivate K1 relay (pin 3)
-  digitalWrite(K1_PIN, LOW);
-  // Deactivate K2 relay (pin 11)
-  digitalWrite(K2_PIN, LOW);
-
   sprintf(line, "\nPlease type \"START\" to initiate a motor start.\n");
   USART_puts(line);
 
@@ -189,25 +183,24 @@ void loop(){
 
       sprintf(line, "Standby, a motor start sequence has been initiated.\n");
     USART_puts(line); //Send line to USART
-
-    tone(BUZ_PIN, 5000);
-    delay(250);
-    noTone(BUZ_PIN);
-    delay(250);
-    tone(BUZ_PIN, 5000);
-    delay(250);
-    noTone(BUZ_PIN);
-    delay(250);
-    tone(BUZ_PIN, 5000);
-    delay(250);
-    noTone(BUZ_PIN);
-
+    
     lcd.clear();                                    // Clear LCD
     lcd.setCursor(0, 0);                            // Point to the LCD line 1 upper right character position
     lcd.print("CAUTION!");
     lcd.setCursor(0, 1);                            // Point to LCD line 2 left character position
     lcd.print("Motor Starting.");
-    delay(500);
+
+    tone(BUZ_PIN, 5000);
+    delay(250);
+    noTone(BUZ_PIN);
+    delay(250);
+    tone(BUZ_PIN, 5000);
+    delay(250);
+    noTone(BUZ_PIN);
+    delay(250);
+    tone(BUZ_PIN, 5000);
+    delay(250);
+    noTone(BUZ_PIN);
 
     //Scroll and clear message
     for (int i = 0; i < 15; i++)
