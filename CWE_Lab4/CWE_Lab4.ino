@@ -298,7 +298,6 @@ ISR(TIMER1_COMPA_vect){
     digitalWrite(K2_PIN, LOW);
 
     if (reset_flag){
-      noTone(BUZ_PIN);
       reset_flag = 0;
       state = secured;
       time_in_state = 0;
@@ -599,13 +598,13 @@ void loop(){
       if(!strcmp(buf,"reset") || !strcmp(buf,"Reset") || !strcmp(buf,"RESET")){
         reset_flag = 1;
         USART_puts(strcat(buf, "\n\n"));
+        noTone(BUZ_PIN);
       }
       else {
         USART_puts("\nInvalid command.  Please type \"RESET.\"\n"); 
       }
     }
     count++;
-    noTone(BUZ_PIN);
     break;
 
   default:
