@@ -136,7 +136,7 @@ void setup(){
   /*pinMode(3, OUTPUT);
   pinMode(11, OUTPUT);
   TCCR2A = _BV(COM2A1) | _BV(COM2B1) | _BV(WGM21) | _BV(WGM20);
-  TCCR2B = _BV(CS22);                                               // This register controls PWM frequency
+  TCCR2B = _BV(CS22); // This register controls PWM frequency
   OCR2A = 0; //SET PWM OF K2 (11)
   OCR2B = 0; //SET PWM OF K1 (3)*/
 
